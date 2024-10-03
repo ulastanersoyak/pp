@@ -1,0 +1,5 @@
+add_subdirectory(memory_region)
+file(GLOB PROCESS_FILES "*.cpp")
+add_library(process STATIC ${PROCESS_FILES})
+target_include_directories(process PRIVATE "${CMAKE_SOURCE_DIR}/includes")
+target_link_libraries(process memory_region)
