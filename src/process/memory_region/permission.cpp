@@ -1,32 +1,36 @@
 #include "process/memory_region/permission.hpp"
+#include <format>
+#include <string>
+#include <vector>
 
 namespace pp {
 
-[[nodiscard]] std::string permission_to_str(enum permission prot) noexcept {
-  std::string perm_str;
-  if (prot == permission::NO_PERMISSION) {
+[[nodiscard]] std::string permission_to_str(enum permission perm) noexcept {
+  if (perm == permission::NO_PERMISSION) {
     return "NO_PERMISSION";
   }
-  if (prot == permission::READ) {
-    perm_str += "READ | ";
-  }
-  if (prot == permission::WRITE) {
-    perm_str += "WRITE | ";
-  }
-  if (prot == permission::EXECUTE) {
-    perm_str += "EXECUTE | ";
-  }
-  if (perm_str.back() == ' ') {
-    perm_str = perm_str.substr(0, perm_str.size() - 3);
-  }
 
-  return perm_str;
+  std::string permissions;
+
+  if (static_cast<int>(perm) & static_cast<int>(permission::READ)) {
+    permissions += "READ | ";
+  }
+  if (static_cast<int>(perm) & static_cast<int>(permission::WRITE)) {
+    permissions += "WRITE | ";
+  }
+  if (static_cast<int>(perm) & static_cast<int>(permission::EXECUTE)) {
+    permissions += "EXECUTE | ";
+  }
+  if (permissions.back() == ' ') {
+    permissions = permissions.substr(0, permissions.size() - 3);
+  }
+  return permissions;
 }
 
 permission operator|=(permission &perm1, permission perm2) noexcept {
-  const auto prot1_ut = static_cast<std::underlying_type_t<permission>>(perm1);
-  const auto prot2_ut = static_cast<std::underlying_type_t<permission>>(perm2);
-  perm1 = static_cast<permission>(prot1_ut | prot2_ut);
+  const auto perm1_ut = static_cast<std::underlying_type_t<permission>>(perm1);
+  const auto perm2_ut = static_cast<std::underlying_type_t<permission>>(perm2);
+  perm1 = static_cast<permission>(perm1_ut | perm2_ut);
   return perm1;
 }
 
@@ -36,9 +40,9 @@ permission operator|=(permission &perm1, permission perm2) noexcept {
 }
 
 permission operator&=(permission &perm1, permission perm2) noexcept {
-  const auto prot1_ut = static_cast<std::underlying_type_t<permission>>(perm1);
-  const auto prot2_ut = static_cast<std::underlying_type_t<permission>>(perm2);
-  perm1 = static_cast<permission>(prot1_ut & prot2_ut);
+  const auto perm1_ut = static_cast<std::underlying_type_t<permission>>(perm1);
+  const auto perm2_ut = static_cast<std::underlying_type_t<permission>>(perm2);
+  perm1 = static_cast<permission>(perm1_ut & perm2_ut);
   return perm1;
 }
 
@@ -48,9 +52,9 @@ permission operator&=(permission &perm1, permission perm2) noexcept {
 }
 
 permission operator^=(permission &perm1, permission perm2) noexcept {
-  const auto prot1_ut = static_cast<std::underlying_type_t<permission>>(perm1);
-  const auto prot2_ut = static_cast<std::underlying_type_t<permission>>(perm2);
-  perm1 = static_cast<permission>(prot1_ut ^ prot2_ut);
+  const auto perm1_ut = static_cast<std::underlying_type_t<permission>>(perm1);
+  const auto perm2_ut = static_cast<std::underlying_type_t<permission>>(perm2);
+  perm1 = static_cast<permission>(perm1_ut ^ perm2_ut);
   return perm1;
 }
 

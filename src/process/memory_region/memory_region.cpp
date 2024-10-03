@@ -25,10 +25,8 @@ parse_permission(std::string_view line) noexcept {
   return perm;
 }
 
-// 197fffff000-19c00000000 ---p 00000000 00:00 0
 memory_region::memory_region(const std::string &region) {
   std::regex pattern{"([a-f0-9]+)-([a-f0-9]+) ([rwxps-]{4}).*"};
-
   std::smatch match;
   if (std::regex_match(region, match, pattern)) {
     const std::string start_str = match[1];
@@ -58,4 +56,10 @@ memory_region::memory_region(const std::string &region) {
 [[nodiscard]] permission memory_region::permissions() const noexcept {
   return this->permissions_;
 }
+
+[[nodiscard]] bool
+memory_region::has_permissions(permission perm) const noexcept {
+  return (this->permissions_ & perm) == perm;
+}
+
 } // namespace pp

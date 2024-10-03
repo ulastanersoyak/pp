@@ -17,6 +17,7 @@ public:
   [[nodiscard]] std::uintptr_t begin() const noexcept;
   [[nodiscard]] std::size_t size() const noexcept;
   [[nodiscard]] permission permissions() const noexcept;
+  [[nodiscard]] bool has_permissions(permission perm) const noexcept;
 };
 
 } // namespace pp
