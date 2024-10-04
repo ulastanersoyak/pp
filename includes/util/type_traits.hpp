@@ -5,6 +5,7 @@
 #include <type_traits>
 
 namespace pp {
+
 template <typename T>
 concept thread_or_process =
     std::is_same_v<std::remove_reference_t<T>, thread> ||
