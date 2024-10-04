@@ -1,4 +1,4 @@
-#include "process/thread/thread.hpp"
+#include "thread/thread.hpp"
 
 #ifdef __linux__
 #include <cerrno>

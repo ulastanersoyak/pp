@@ -1,5 +1,5 @@
-#include "process/memory_region/memory_region.hpp"
-#include "process/memory_region/permission.hpp"
+#include "memory_region/memory_region.hpp"
+#include "memory_region/permission.hpp"
 #include <algorithm>
 #include <cstdint>
 #ifdef __linux__

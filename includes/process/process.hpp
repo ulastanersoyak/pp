@@ -1,6 +1,6 @@
 #pragma once
 
-#include "process/memory_region/memory_region.hpp"
+#include "memory_region/memory_region.hpp"
 #include "thread/thread.hpp"
 
 #include <cstdint>

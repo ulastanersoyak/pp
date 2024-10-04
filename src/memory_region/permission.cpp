@@ -1,7 +1,5 @@
-#include "process/memory_region/permission.hpp"
-#include <format>
+#include "memory_region/permission.hpp"
 #include <string>
-#include <vector>
 
 namespace pp {
 

@@ -1,11 +1,8 @@
-#include "process/memory_region/memory_region.hpp"
-#include "process/process.hpp"
-#include "process/thread/thread.hpp"
-
+#include "memory_region.hpp"
+#include "util/type_traits.hpp"
 #include <cassert>
 #include <cstddef>
 #include <optional>
-#include <type_traits>
 #include <vector>
 
 #ifdef __linux__
@@ -17,15 +14,6 @@
 
 namespace pp {
 
-template <typename T>
-concept thread_or_process =
-    std::is_same_v<std::remove_reference_t<T>, thread> ||
-    std::is_same_v<std::remove_reference_t<T>, process>;
-
-template <thread_or_process T> static constexpr bool is_process(const T &) {
-  return std::is_same_v<std::remove_reference_t<T>, process>;
-}
-
 template <thread_or_process T>
 [[nodiscard]] std::vector<std::byte>
 read_memory_region(const T &t, const memory_region &region,
@@ -33,12 +21,7 @@ read_memory_region(const T &t, const memory_region &region,
   {
     std::vector<std::byte> mem{read_size.value_or(region.size())};
 #ifdef __linux__
-    std::uint32_t id{0};
-    if constexpr (is_process(t)) {
-      id = t.pid();
-    } else {
-      id = t.tid();
-    }
+    std::uint32_t id = get_id(t);
     iovec local{.iov_base = mem.data(), .iov_len = mem.size()};
     iovec remote{.iov_base = reinterpret_cast<void *>(region.begin()),
                  .iov_len = region.size()};
@@ -68,12 +51,7 @@ void write_memory_region(const T &t, const memory_region &region,
   iovec remote{.iov_base = reinterpret_cast<void *>(region.begin()),
                .iov_len = data.size()};
 
-  std::uint32_t id{0};
-  if constexpr (is_process(t)) {
-    id = t.pid();
-  } else {
-    id = t.tid();
-  }
+  std::uint32_t id = get_id(t);
   if (process_vm_writev(static_cast<std::int32_t>(id), &local, 1, &remote, 1,
                         0) != static_cast<ssize_t>(data.size())) {
     throw std::system_error(

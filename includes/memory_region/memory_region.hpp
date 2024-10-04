@@ -1,6 +1,6 @@
 #pragma once
 
-#include "process/memory_region/permission.hpp"
+#include "permission.hpp"
 
 #include <cstdint>
 
