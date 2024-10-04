@@ -1,5 +1,9 @@
 #include "process/process.hpp"
 #include <cassert>
+#include <cstring>
+#include <iterator>
+#include <limits>
+#include <print>
 
 #ifdef __linux__
 #include <algorithm>
@@ -123,6 +127,28 @@ void process::write_memory_region(const memory_region &region,
         std::format("no process found with the name: {}", std::string(name)));
   }
   return processes;
+}
+
+void replace_memory(const process proc, const memory_region &region,
+                    std::span<const std::byte> find,
+                    std::span<const std::byte> replace,
+                    std::optional<std::size_t> occurrences) {
+  auto mem = proc.read_memory_region(region);
+  auto mem_span = std::span(mem);
+  auto remaining_occurrences =
+      occurrences.value_or(std::numeric_limits<std::size_t>::max());
+  while (!mem_span.empty() && (remaining_occurrences > 0)) {
+    if (const auto found = std::ranges::search(mem_span, find);
+        !found.empty()) {
+      const auto begin =
+          std::ranges::distance(std::cbegin(mem_span), std::cbegin(found));
+      std::memcpy(mem_span.data() + begin, replace.data(), replace.size());
+      proc.write_memory_region(region, mem);
+      remaining_occurrences--;
+    } else {
+      break;
+    }
+  }
 }
 
 } // namespace pp
