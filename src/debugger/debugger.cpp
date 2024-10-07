@@ -1,4 +1,5 @@
 #include "debugger/debugger.hpp"
+#include <sys/user.h>
 
 #ifdef __linux__
 #include <cerrno>
@@ -66,6 +67,30 @@ debugger::~debugger() noexcept {
       std::exit(EXIT_FAILURE);
     }
   }
+}
+
+[[nodiscard]] std::vector<registers> debugger::get_regs() {
+  std::vector<registers> regs_vec{};
+#ifdef __linux__
+  for (const auto &t : this->suspended_threads) {
+    user_regs_struct regs{};
+    if (ptrace(PTRACE_GETREGS, static_cast<int32_t>(t.tid()), 0, &regs) == -1) {
+      throw std::system_error(
+          errno, std::generic_category(),
+          std::format("failed to get registers of tid: {}", t.tid()));
+    }
+
+    user_fpregs_struct fp_regs{};
+    if (ptrace(PTRACE_GETREGS, static_cast<int32_t>(t.tid()), 0, &fp_regs) ==
+        -1) {
+      throw std::system_error(
+          errno, std::generic_category(),
+          std::format("failed to get fp registers of tid: {}", t.tid()));
+    }
+    regs_vec.emplace_back(regs, fp_regs);
+  }
+#endif
+  return regs_vec;
 }
 
 } // namespace pp

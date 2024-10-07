@@ -1,5 +1,6 @@
 #pragma once
 
+#include "debugger/registers.hpp"
 #include "process/process.hpp"
 
 #include <cstddef>
@@ -26,6 +27,8 @@ public:
   debugger &operator=(debugger &&debug) noexcept = default;
 
   ~debugger() noexcept;
+
+  [[nodiscard]] std::vector<registers> get_regs();
 };
 
 } // namespace pp
