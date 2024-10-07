@@ -18,6 +18,13 @@ class debugger {
 
 public:
   debugger(process &&proc, std::optional<std::size_t> timeout = std::nullopt);
+
+  debugger(const debugger &debug) = delete;
+  debugger &operator=(const debugger &debug) = delete;
+
+  debugger(debugger &&debug) noexcept = default;
+  debugger &operator=(debugger &&debug) noexcept = default;
+
   ~debugger() noexcept;
 };
 

@@ -22,13 +22,13 @@ namespace pp {
   std::string comm_path = std::format("/proc/{}/comm", this->pid_);
   std::ifstream comm(comm_path);
   if (!comm.is_open()) {
-    throw std::system_error(errno, std::generic_category(),
-                            std::format("unable to open file: {}", comm_path));
+    throw std::filesystem::filesystem_error(
+        std::format("unable to open file: {}", comm_path), std::error_code());
   }
   std::getline(comm, name);
   if (name.empty()) {
-    throw std::system_error(errno, std::generic_category(),
-                            std::format("unable to read file: {}", comm_path));
+    throw std::filesystem::filesystem_error(
+        std::format("unable to read file: {}", comm_path), std::error_code());
   }
 #endif
   return name;
@@ -40,16 +40,16 @@ namespace pp {
   std::string maps_path = std::format("/proc/{}/maps", this->pid_);
   std::ifstream maps{maps_path};
   if (!maps.is_open()) {
-    throw std::system_error(errno, std::generic_category(),
-                            std::format("unable to open file: {}", maps_path));
+    throw std::filesystem::filesystem_error(
+        std::format("unable to open file: {}", maps_path), std::error_code());
   }
   std::string line;
   while (std::getline(maps, line)) {
     mem_region_vec.emplace_back(line);
   }
   if (mem_region_vec.empty()) {
-    throw std::system_error(errno, std::generic_category(),
-                            std::format("unable to read file: {}", maps_path));
+    throw std::filesystem::filesystem_error(
+        std::format("unable to read file: {}", maps_path), std::error_code());
   }
 #endif
   return mem_region_vec;
