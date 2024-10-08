@@ -1,5 +1,6 @@
 #include "debugger/registers.hpp"
 
+#ifdef __linux__
 std::ostream &operator<<(std::ostream &os, const user_regs_struct &r) {
   os << "r15: " << std::hex << r.r15 << "\n";
   os << "r14: " << r.r14 << "\n";
@@ -31,16 +32,4 @@ std::ostream &operator<<(std::ostream &os, const user_regs_struct &r) {
 
   return os;
 }
-
-std::ostream &operator<<(std::ostream &os, const user_fpregs_struct &r) {
-  os << "\nfloating point registers:\n";
-  os << "cwd: " << r.cwd << "\n";
-  os << "swd: " << r.swd << "\n";
-  os << "ftw: " << r.ftw << "\n";
-  os << "fop: " << r.fop << "\n";
-  os << "rip: " << r.rip << "\n";
-  os << "rdp: " << r.rdp << "\n";
-  os << "mxcsr: " << r.mxcsr << "\n";
-  os << "mxcr_mask: " << r.mxcr_mask << "\n";
-  return os;
-}
+#endif

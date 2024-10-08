@@ -7,10 +7,13 @@
 #include <iostream>
 
 struct registers {
+#ifdef __x86_64__
 #ifdef __linux__
   user_regs_struct regs{};
-  user_fpregs_struct fp_regs{};
+#endif
+#else
+#error "only x86_64 architecture registers are supported"
 #endif
 };
+
 std::ostream &operator<<(std::ostream &os, const user_regs_struct &r);
-std::ostream &operator<<(std::ostream &os, const user_fpregs_struct &r);

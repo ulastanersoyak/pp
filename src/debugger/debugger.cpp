@@ -1,5 +1,5 @@
 #include "debugger/debugger.hpp"
-#include <sys/user.h>
+#include "debugger/registers.hpp"
 
 #ifdef __linux__
 #include <cerrno>
@@ -10,6 +10,7 @@
 #include <limits>
 
 #include <sys/ptrace.h>
+#include <sys/user.h>
 #include <sys/wait.h>
 #include <system_error>
 #endif
@@ -25,13 +26,16 @@ debugger::debugger(process &&proc, std::optional<std::size_t> timeout)
   const auto threads = proc.threads();
 
   for (const thread &t : threads) {
-    if (ptrace(PTRACE_ATTACH, t.tid(), 0, 0) == -1) {
+    errno = 0;
+    if (ptrace(PTRACE_ATTACH, static_cast<std::int32_t>(t.tid()), nullptr,
+               nullptr) == -1) {
       throw std::system_error(
           errno, std::generic_category(),
           std::format("failed to attach to tid: {}", t.tid()));
     }
     while (true) {
       std::int32_t status{0};
+      errno = 0;
       if (waitpid(static_cast<std::int32_t>(t.tid()), &status, 0) == -1) {
         throw std::system_error(
             errno, std::generic_category(),
@@ -41,7 +45,9 @@ debugger::debugger(process &&proc, std::optional<std::size_t> timeout)
         this->suspended_threads.emplace_back(proc.pid(), t.tid());
         break;
       } else {
-        if (ptrace(PTRACE_CONT, t.tid(), 0, WSTOPSIG(status)) == -1) {
+        errno = 0;
+        if (ptrace(PTRACE_CONT, static_cast<std::int32_t>(t.tid()), nullptr,
+                   WSTOPSIG(status)) == -1) {
           throw std::system_error(
               errno, std::generic_category(),
               std::format("failed to continue to tid: {}", t.tid()));
@@ -62,35 +68,47 @@ debugger::debugger(process &&proc, std::optional<std::size_t> timeout)
 
 debugger::~debugger() noexcept {
   for (const auto &t : this->suspended_threads) {
-    if (ptrace(PTRACE_DETACH, static_cast<int32_t>(t.tid()), 0, 0) == -1) {
-      perror("ptrace PTRACE_DETACH failed");
+    if (ptrace(PTRACE_DETACH, static_cast<std::int32_t>(t.tid()), nullptr,
+               nullptr) == -1) {
+      perror("PTRACE_DETACH failed");
       std::exit(EXIT_FAILURE);
     }
   }
 }
 
-[[nodiscard]] std::vector<registers> debugger::get_regs() {
-  std::vector<registers> regs_vec{};
+[[nodiscard]] registers debugger::get_regs(const thread &t) const {
+#ifdef __x86_64__
 #ifdef __linux__
-  for (const auto &t : this->suspended_threads) {
-    user_regs_struct regs{};
-    if (ptrace(PTRACE_GETREGS, static_cast<int32_t>(t.tid()), 0, &regs) == -1) {
-      throw std::system_error(
-          errno, std::generic_category(),
-          std::format("failed to get registers of tid: {}", t.tid()));
-    }
+  errno = 0;
+  user_regs_struct regs{};
+  if (ptrace(PTRACE_GETREGS, static_cast<std::int32_t>(t.tid()), nullptr,
+             &regs) == -1) {
+    throw std::system_error(
+        errno, std::generic_category(),
+        std::format("failed to get registers of tid: {}", t.tid()));
+  }
 
-    user_fpregs_struct fp_regs{};
-    if (ptrace(PTRACE_GETREGS, static_cast<int32_t>(t.tid()), 0, &fp_regs) ==
-        -1) {
-      throw std::system_error(
-          errno, std::generic_category(),
-          std::format("failed to get fp registers of tid: {}", t.tid()));
-    }
-    regs_vec.emplace_back(regs, fp_regs);
+#endif
+#else
+#error "only x86_64 architecture registers are supported"
+#endif
+  return {.regs = regs};
+}
+
+void debugger::set_regs(const thread &t, const registers &regs) const {
+#ifdef __x86_64__
+#ifdef __linux__
+  errno = 0;
+  if (ptrace(PTRACE_SETREGS, static_cast<std::int32_t>(t.tid()), nullptr,
+             &regs.regs) == -1) {
+    throw std::system_error(
+        errno, std::generic_category(),
+        std::format("failed to set registers of tid: {}", t.tid()));
   }
 #endif
-  return regs_vec;
+#else
+#error "only x86_64 architecture registers are supported"
+#endif
 }
 
 } // namespace pp

@@ -28,7 +28,9 @@ public:
 
   ~debugger() noexcept;
 
-  [[nodiscard]] std::vector<registers> get_regs();
+  [[nodiscard]] registers get_regs(const thread &t) const;
+  void set_regs(const thread &t, const registers &regs) const;
+  // void set_regs() const;
 };
 
 } // namespace pp
