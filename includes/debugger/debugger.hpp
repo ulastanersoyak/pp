@@ -1,6 +1,7 @@
 #pragma once
 
 #include "debugger/registers.hpp"
+#include "memory_region/memory_region.hpp"
 #include "process/process.hpp"
 
 #include <cstddef>
@@ -30,7 +31,8 @@ public:
 
   [[nodiscard]] registers get_regs(const thread &t) const;
   void set_regs(const thread &t, const registers &regs) const;
-  // void set_regs() const;
+  [[nodiscard]] thread main_thread() const;
+  [[nodiscard]] memory_region allocate_memory(std::size_t bytes) const;
 };
 
 } // namespace pp
