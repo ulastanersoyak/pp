@@ -6,6 +6,7 @@
 
 #include <cstddef>
 #include <optional>
+#include <string_view>
 #include <vector>
 
 #ifdef __linux__
@@ -19,7 +20,7 @@ class debugger {
   std::vector<thread> suspended_threads{};
 
 public:
-  debugger(process &&proc, std::optional<std::size_t> timeout = std::nullopt);
+  debugger(process &proc, std::optional<std::size_t> timeout = std::nullopt);
 
   debugger(const debugger &debug) = delete;
   debugger &operator=(const debugger &debug) = delete;
@@ -33,6 +34,7 @@ public:
   void set_regs(const thread &t, const registers &regs) const;
   [[nodiscard]] thread main_thread() const;
   [[nodiscard]] memory_region allocate_memory(std::size_t bytes) const;
+  void load_library(std::string_view path) const;
 };
 
 } // namespace pp
