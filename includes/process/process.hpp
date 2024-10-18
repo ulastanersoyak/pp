@@ -17,8 +17,8 @@ public:
   [[nodiscard]] std::uint32_t pid() const noexcept;
   [[nodiscard]] std::string name() const;
   [[nodiscard]] std::vector<memory_region> memory_regions() const;
-
   [[nodiscard]] std::vector<thread> threads() const;
+  [[nodiscard]] std::string exe_path() const;
 };
 
 [[nodiscard]] std::vector<std::uint32_t> get_all_pids();

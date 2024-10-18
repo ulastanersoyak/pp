@@ -35,6 +35,12 @@ public:
   [[nodiscard]] thread main_thread() const;
   [[nodiscard]] memory_region allocate_memory(std::size_t bytes) const;
   void load_library(std::string_view path) const;
+  [[nodiscard]] std::string demangle(std::string_view raw_fn_name) const;
+  [[nodiscard]] std::vector<std::string> raw_function_names() const;
+  [[nodiscard]] std::vector<std::string> demangled_function_names() const;
+  [[nodiscard]] std::uintptr_t get_func_addr(std::string_view fn_name) const;
+  void hook_function(std::string_view target_fn_name,
+                     std::uintptr_t hook_fn_addr) const;
 };
 
 } // namespace pp

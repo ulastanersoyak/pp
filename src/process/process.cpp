@@ -98,4 +98,15 @@ namespace pp {
   return processes;
 }
 
+[[nodiscard]] std::string process::exe_path() const {
+  for (const auto &reg : this->memory_regions()) {
+    const auto name = reg.name();
+    if (name.has_value() && name->starts_with("/")) {
+      return reg.name().value();
+    }
+  }
+  throw std::runtime_error(
+      std::format("no path found for pid: {}", this->pid()));
+}
+
 } // namespace pp

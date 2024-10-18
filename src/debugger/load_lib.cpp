@@ -1,11 +1,10 @@
 #include "debugger/debugger.hpp"
 #include "memory_region/memio.hpp"
+#include "util/read_file.hpp"
 
 #include <cstdlib>
 #include <cstring>
 #include <dlfcn.h>
-#include <fstream>
-#include <sstream>
 
 #ifdef __linux__
 #include <elf.h>
@@ -29,16 +28,7 @@ void debugger::load_library(std::string_view path) const {
     throw std::runtime_error(
         std::format("no libc region was found in pid: {}", this->proc_.pid()));
   }
-  const std::ifstream file{libc_region->name()->c_str(), std::ios_base::binary};
-  if (!file.good() || file.bad() || !file.is_open()) {
-    throw std::system_error(
-        errno, std::generic_category(),
-        std::format("failed to read libc in pid: {}", this->proc_.pid()));
-  }
-  std::stringstream stream{};
-  stream << file.rdbuf();
-
-  const auto elf_str = stream.str();
+  const auto elf_str = read_file(path);
   const auto *elf = elf_str.data();
 
   Elf64_Ehdr elf_header{};
