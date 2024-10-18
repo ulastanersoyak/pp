@@ -1,10 +1,11 @@
 #include "thread/thread.hpp"
 
-#ifdef __linux__
 #include <cerrno>
 #include <fstream>
-#include <sys/uio.h>
 #include <system_error>
+
+#ifdef __linux__
+#include <sys/uio.h>
 #endif
 
 namespace pp {

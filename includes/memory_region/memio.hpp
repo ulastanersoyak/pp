@@ -1,15 +1,16 @@
 #include "memory_region.hpp"
 #include "util/type_traits.hpp"
+
 #include <cassert>
 #include <cstddef>
+#include <cstring>
+#include <format>
 #include <optional>
+#include <system_error>
 #include <vector>
 
 #ifdef __linux__
-#include <cstring>
-#include <format>
 #include <sys/uio.h>
-#include <system_error>
 #endif
 
 namespace pp {

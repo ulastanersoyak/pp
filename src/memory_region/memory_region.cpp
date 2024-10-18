@@ -1,11 +1,10 @@
 #include "memory_region/memory_region.hpp"
 #include "memory_region/permission.hpp"
+
 #include <algorithm>
 #include <cstdint>
-#ifdef __linux__
 #include <regex>
 #include <stdexcept>
-#endif
 
 namespace pp {
 #ifdef __linux__

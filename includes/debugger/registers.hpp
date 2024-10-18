@@ -1,10 +1,10 @@
 #pragma once
 
+#include <iostream>
+
 #ifdef __linux__
 #include <sys/user.h>
-
 #endif
-#include <iostream>
 
 struct registers {
 #ifdef __x86_64__

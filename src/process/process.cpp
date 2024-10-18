@@ -1,16 +1,13 @@
 #include "process/process.hpp"
 
-#include <cassert>
-#include <cstring>
-#include <string>
-
-#ifdef __linux__
 #include <algorithm>
+#include <cassert>
 #include <cerrno>
+#include <cstring>
 #include <filesystem>
 #include <fstream>
+#include <string>
 #include <system_error>
-#endif
 
 namespace pp {
 
