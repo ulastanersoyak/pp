@@ -18,7 +18,11 @@ public:
   [[nodiscard]] std::string name() const;
   [[nodiscard]] std::vector<memory_region> memory_regions() const;
   [[nodiscard]] std::vector<thread> threads() const;
+  [[nodiscard]] std::uintptr_t base_addr() const;
   [[nodiscard]] std::string exe_path() const;
+  [[nodiscard]] std::vector<std::string> function_names() const;
+  [[nodiscard]] std::optional<std::uintptr_t>
+  func_addr(std::string_view fn_name) const;
 };
 
 [[nodiscard]] std::vector<std::uint32_t> get_all_pids();

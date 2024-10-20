@@ -1,5 +1,6 @@
 #include "debugger/debugger.hpp"
 #include "memory_region/memio.hpp"
+#include "util/is_elf.hpp"
 #include "util/read_file.hpp"
 
 #include <cstdlib>
@@ -28,15 +29,15 @@ void debugger::load_library(std::string_view path) const {
     throw std::runtime_error(
         std::format("no libc region was found in pid: {}", this->proc_.pid()));
   }
-  const auto elf_str = read_file(path);
+  auto elf_str = read_file(path);
   const auto *elf = elf_str.data();
 
   Elf64_Ehdr elf_header{};
   std::memcpy(&elf_header, elf, sizeof(elf_header));
-  if (std::memcmp(elf_header.e_ident, ELFMAG, SELFMAG) != 0) [[unlikely]] {
-    throw std::system_error(errno, std::generic_category(),
-                            std::format("wrong file format for libc in pid: {}",
-                                        this->proc_.pid()));
+  if (!is_elf(path)) [[unlikely]] {
+    throw std::system_error(
+        errno, std::generic_category(),
+        std::format("wrong file format for pid: {}", this->proc_.pid()));
   }
   std::vector<Elf64_Shdr> section_headers{elf_header.e_shnum};
   std::memcpy(section_headers.data(), elf + elf_header.e_shoff,
@@ -60,7 +61,7 @@ void debugger::load_library(std::string_view path) const {
   std::vector<char> str_table(symbol_str_table.sh_size);
   std::memcpy(str_table.data(), elf + symbol_str_table.sh_offset,
               str_table.size());
-  [[maybe_unused]] std::uintptr_t dlopen_addr{};
+  std::uintptr_t dlopen_addr{};
   for (const auto &sym : syms) {
     if (std::string_view(str_table.data() + sym.st_name) == "dlopen"sv) {
       dlopen_addr = sym.st_value + libc_region->begin();
