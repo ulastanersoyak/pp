@@ -1,5 +1,6 @@
 #include "debugger/registers.hpp"
 
+#ifdef __x86_64__
 #ifdef __linux__
 std::ostream &operator<<(std::ostream &os, const user_regs_struct &r) {
   os << "r15: " << std::hex << r.r15 << "\n";
@@ -32,4 +33,9 @@ std::ostream &operator<<(std::ostream &os, const user_regs_struct &r) {
 
   return os;
 }
+#else
+#error "only linux is supported"
+#endif
+#else
+#error "only x86_64 architecture is supported"
 #endif

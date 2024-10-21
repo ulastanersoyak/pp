@@ -30,6 +30,8 @@ thread::thread(std::uint32_t pid, std::uint32_t tid) : pid_{pid}, tid_{tid} {}
     throw std::system_error(errno, std::generic_category(),
                             std::format("unable to read file: {}", comm_path));
   }
+#else
+#error "only linux is supported"
 #endif
   return name;
 }

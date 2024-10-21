@@ -16,6 +16,8 @@ class memory_region {
 public:
 #ifdef __linux__
   memory_region(const std::string &region);
+#else
+#error "only linux is supported"
 #endif
   memory_region(std::uintptr_t begin, std::size_t size, permission permissions,
                 const std::optional<std::string> &name = std::nullopt)

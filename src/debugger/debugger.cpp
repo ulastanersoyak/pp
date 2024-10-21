@@ -62,6 +62,9 @@ debugger::debugger(process &proc, std::optional<std::size_t> timeout)
         errno, std::generic_category(),
         std::format("failed to attach to all threads of pid: {}", proc.pid()));
   }
+
+#else
+#error "only linux is supported"
 #endif
 }
 
@@ -86,6 +89,8 @@ debugger::~debugger() noexcept {
         std::format("failed to get registers of tid: {}", t.tid()));
   }
 
+#else
+#error "only linux is supported"
 #endif
 #else
 #error "only x86_64 architecture is supported"
@@ -102,6 +107,8 @@ void debugger::set_regs(const thread &t, const registers &regs) const {
         errno, std::generic_category(),
         std::format("failed to set registers of tid: {}", t.tid()));
   }
+#else
+#error "only linux is supported"
 #endif
 #else
 #error "only x86_64 architecture registers are supported"

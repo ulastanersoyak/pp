@@ -48,6 +48,8 @@ memory_region::memory_region(const std::string &region) {
     throw std::invalid_argument("given region was invalid :" + region);
   }
 }
+#else
+#error "only linux is supported"
 #endif
 
 [[nodiscard]] std::uintptr_t memory_region::begin() const noexcept {

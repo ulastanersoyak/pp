@@ -11,6 +11,8 @@
 
 #ifdef __linux__
 #include <sys/uio.h>
+#else
+#error "only linux is supported"
 #endif
 
 namespace pp {
@@ -35,6 +37,8 @@ read_memory_region(const T &t, const memory_region &region,
           std::format("failed to read memory region beginning at: {:x}",
                       region.begin()));
     }
+#else
+#error "only linux is supported"
 #endif
     return mem;
   }
@@ -60,6 +64,8 @@ void write_memory_region(const T &t, const memory_region &region,
         std::format("failed to write to memory region beginning at: {:x}",
                     region.begin()));
   }
+#else
+#error "only linux is supported"
 #endif
 }
 

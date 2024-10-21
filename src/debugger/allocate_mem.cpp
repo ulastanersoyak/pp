@@ -9,6 +9,8 @@
 #ifdef __linux__
 #include <sys/mman.h>
 #include <sys/wait.h>
+#else
+#error "only linux is supported"
 #endif
 
 namespace pp {
@@ -106,6 +108,8 @@ namespace pp {
                     main_thread_tid));
   }
 
+#else
+#error "only linux is supported"
 #endif
 #else
 #error "only x86_64 architecture is supported"

@@ -22,6 +22,8 @@ namespace pp {
   stream << file.rdbuf();
   return stream.str();
 }
+
+#ifdef __linux__
 [[nodiscard]] std::optional<std::string> read_elf(std::string_view file_name) {
   if (!is_elf(file_name)) {
     return std::nullopt;
@@ -34,5 +36,8 @@ namespace pp {
   }
   return elf_str;
 }
+#else
+#error "only linux is supported"
+#endif
 
 } // namespace pp

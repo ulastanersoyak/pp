@@ -1,8 +1,12 @@
-#include <cstring>
 #ifdef __linux__
 #include "util/read_file.hpp"
-#include <elf.h>
+#include <cstring>
 #include <string_view>
+
+#ifdef __linux__
+#include <elf.h>
+#endif
+
 namespace pp {
 [[nodiscard]] constexpr bool is_elf(std::string_view file_path) {
   const auto elf_str = read_file(file_path);
@@ -15,4 +19,6 @@ namespace pp {
   return true;
 }
 } // namespace pp
+#else
+#error "only linux is supported"
 #endif

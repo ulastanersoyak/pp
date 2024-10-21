@@ -12,6 +12,8 @@
 #ifdef __linux__
 #include <elf.h>
 #include <sys/ptrace.h>
+#else
+#error "only linux is supported"
 #endif
 
 namespace pp {

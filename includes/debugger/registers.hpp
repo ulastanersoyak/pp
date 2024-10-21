@@ -10,6 +10,8 @@ struct registers {
 #ifdef __x86_64__
 #ifdef __linux__
   user_regs_struct regs{};
+#else
+#error "only linux is supported"
 #endif
 #else
 #error "only x86_64 architecture registers are supported"

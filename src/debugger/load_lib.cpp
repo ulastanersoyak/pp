@@ -12,6 +12,8 @@
 #include <sys/mman.h>
 #include <sys/ptrace.h>
 #include <sys/wait.h>
+#else
+#error "only linux is supported"
 #endif
 
 namespace pp {
@@ -155,6 +157,8 @@ void debugger::load_library(std::string_view path) const {
         std::format("failed to restore instructions back to tid: {}",
                     main_thread_tid));
   }
+#else
+#error "only linux is supported"
 #endif
 #else
 #error "only x86_64 architecture is supported"
