@@ -9,6 +9,11 @@
 
 namespace pp {
 
+struct function {
+  std::string name{};
+  std::uintptr_t address{};
+};
+
 class process {
   std::uint32_t pid_{0};
 
@@ -23,6 +28,9 @@ public:
   [[nodiscard]] std::vector<std::string> function_names() const;
   [[nodiscard]] std::optional<std::uintptr_t>
   func_addr(std::string_view fn_name) const;
+  [[nodiscard]] std::vector<function> functions() const;
+  [[nodiscard]] memory_region addr_to_region(std::uintptr_t addr) const;
+  void hook(const function &fn) const;
 };
 
 [[nodiscard]] std::vector<std::uint32_t> get_all_pids();

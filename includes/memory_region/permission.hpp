@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <string>
 
 namespace pp {
@@ -11,8 +12,8 @@ enum class permission {
   EXECUTE = 1 << 2
 };
 
-[[nodiscard]] std::string permission_to_str(enum permission prot) noexcept;
-[[nodiscard]] std::string permission_to_str(enum permission prot) noexcept;
+[[nodiscard]] std::string permission_to_str(permission prot) noexcept;
+[[nodiscard]] std::int64_t to_native(permission perm);
 
 permission operator|=(permission &perm1, permission perm2) noexcept;
 [[nodiscard]] permission operator|(permission perm1, permission perm2) noexcept;

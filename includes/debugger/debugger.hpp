@@ -38,6 +38,11 @@ public:
   [[nodiscard]] thread main_thread() const;
   [[nodiscard]] memory_region allocate_memory(std::size_t bytes) const;
   void load_library(std::string_view path) const;
+  void change_region_permissions(const memory_region &region,
+                                 permission perm = permission::READ |
+                                                   permission::WRITE |
+                                                   permission::EXECUTE) const;
+  void hook(const function &fn) const;
 };
 
 } // namespace pp

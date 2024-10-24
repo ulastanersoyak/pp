@@ -4,13 +4,11 @@
 
 namespace pp {
 
-[[nodiscard]] std::string permission_to_str(enum permission perm) noexcept {
+[[nodiscard]] std::string permission_to_str(permission perm) noexcept {
   if (perm == permission::NO_PERMISSION) {
     return "NO_PERMISSION";
   }
-
   std::string permissions;
-
   if (static_cast<int>(perm) & static_cast<int>(permission::READ)) {
     permissions += "READ | ";
   }
@@ -24,6 +22,10 @@ namespace pp {
     permissions = permissions.substr(0, permissions.size() - 3);
   }
   return permissions;
+}
+
+[[nodiscard]] std::int64_t to_native(permission perm) {
+  return static_cast<std::int64_t>(perm);
 }
 
 permission operator|=(permission &perm1, permission perm2) noexcept {

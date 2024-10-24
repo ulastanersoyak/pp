@@ -27,6 +27,7 @@ public:
   [[nodiscard]] permission permissions() const noexcept;
   [[nodiscard]] std::optional<std::string> name() const noexcept;
   [[nodiscard]] bool has_permissions(permission perm) const noexcept;
+  void change_permission(permission perm) const noexcept;
 };
 
 } // namespace pp

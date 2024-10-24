@@ -1,8 +1,10 @@
 #include "debugger/debugger.hpp"
 #include "memory_region/memio.hpp"
+#include "memory_region/permission.hpp"
 #include "util/is_elf.hpp"
 #include "util/read_file.hpp"
 
+#include <algorithm>
 #include <cstdlib>
 #include <cstring>
 #include <dlfcn.h>
