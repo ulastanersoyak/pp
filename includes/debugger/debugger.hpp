@@ -5,6 +5,7 @@
 #include "process/process.hpp"
 
 #include <cstddef>
+#include <filesystem>
 #include <optional>
 #include <string_view>
 #include <vector>
@@ -42,7 +43,9 @@ public:
                                  permission perm = permission::READ |
                                                    permission::WRITE |
                                                    permission::EXECUTE) const;
-  void hook(const function &fn) const;
+
+  void hook(const function &hook_target, std::string_view function_name,
+            const std::filesystem::path &source_fn) const;
 };
 
 } // namespace pp

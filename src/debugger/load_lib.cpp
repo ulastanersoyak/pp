@@ -33,16 +33,17 @@ void debugger::load_library(std::string_view path) const {
     throw std::runtime_error(
         std::format("no libc region was found in pid: {}", this->proc_.pid()));
   }
-  auto elf_str = read_file(path);
-  const auto *elf = elf_str.data();
+
+  const auto elf_opt = read_elf(path);
+  if (!elf_opt.has_value()) {
+    throw std::system_error(
+        errno, std::generic_category(),
+        std::format("failed to read the elf file /tmp/hook.o"));
+  }
+  const auto *elf = elf_opt.value().data();
 
   Elf64_Ehdr elf_header{};
   std::memcpy(&elf_header, elf, sizeof(elf_header));
-  if (!is_elf(path)) [[unlikely]] {
-    throw std::system_error(
-        errno, std::generic_category(),
-        std::format("wrong file format for pid: {}", this->proc_.pid()));
-  }
   std::vector<Elf64_Shdr> section_headers{elf_header.e_shnum};
   std::memcpy(section_headers.data(), elf + elf_header.e_shoff,
               sizeof(Elf64_Shdr) * section_headers.size());
