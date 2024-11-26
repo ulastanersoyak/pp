@@ -12,10 +12,10 @@ namespace pp {
 
 constexpr inline std::uint16_t page_size{4096};
 
-void debugger::hook(const function &target, std::string_view hook,
+void debugger::hook(const function &target,
                     const std::filesystem::path &source) const {
   // compile the user given function and inject it to the target process
-  auto fn_bin = compile_func(hook, source);
+  auto fn_bin = compile_func(source);
   const auto allocated_region = this->allocate_memory(page_size);
   write_memory_region(this->proc_, allocated_region, fn_bin);
   // prepare to modify the target function

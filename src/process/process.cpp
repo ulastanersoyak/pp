@@ -9,7 +9,6 @@
 #include <cstring>
 #include <filesystem>
 #include <fstream>
-#include <optional>
 #include <string>
 #include <system_error>
 
@@ -89,6 +88,19 @@ namespace pp {
   return this->memory_regions().at(0).begin();
 }
 
+[[nodiscard]] std::size_t process::mem_usage() const {
+  const auto comm_path = std::format("/proc/{}/statm", this->pid_);
+  const auto contents = pp::read_file(comm_path);
+  std::istringstream iss(contents);
+  std::size_t total_pages, resident_pages;
+  if (!(iss >> total_pages >> resident_pages)) {
+    throw std::runtime_error(
+        std::format("Failed to parse statm contents: {}", contents));
+  }
+  const auto page_size = static_cast<std::size_t>(sysconf(_SC_PAGESIZE));
+  return resident_pages * page_size;
+}
+
 [[nodiscard]] std::vector<std::uint32_t> get_all_pids() {
   std::vector<std::uint32_t> pid_vec{};
 #ifdef __linux__
@@ -121,18 +133,9 @@ namespace pp {
   return processes;
 }
 
-[[nodiscard]] std::string process::exe_path() const {
+[[nodiscard]] std::string process::exe_path() const noexcept {
 #ifdef __linux__
-  const auto file = read_file(std::format("/proc/{}/comm", this->pid()));
-  const auto proc_name = file.substr(0, file.size() - 2);
-  for (const auto &region : this->memory_regions()) {
-    const auto name = region.name();
-    if (name.has_value() && name.value().contains(proc_name)) {
-      return region.name().value();
-    }
-  }
-  throw std::runtime_error(
-      std::format("no path found for pid: {}", this->pid()));
+  return std::format("/proc/{}/exe", this->pid());
 #else
 #error "only linux is supported"
 #endif

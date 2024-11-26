@@ -44,8 +44,7 @@ public:
                                                    permission::WRITE |
                                                    permission::EXECUTE) const;
 
-  void hook(const function &target, std::string_view hook,
-            const std::filesystem::path &source) const;
+  void hook(const function &target, const std::filesystem::path &source) const;
 };
 
 } // namespace pp
