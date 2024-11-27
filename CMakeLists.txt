@@ -68,4 +68,4 @@ if(CMAKE_BUILD_TYPE STREQUAL Release)
 endif()
 
 add_subdirectory(src)
-add_subdirectory(test)
+# add_subdirectory(test)

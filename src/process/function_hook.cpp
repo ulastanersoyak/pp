@@ -96,11 +96,24 @@ process::func_addr(std::string_view function_name) const {
   Elf64_Ehdr elf_header{};
   std::memcpy(&elf_header, elf, sizeof(elf_header));
 
+  // Get program headers to find load address
+  std::vector<Elf64_Phdr> program_headers(elf_header.e_phnum);
+  std::memcpy(program_headers.data(), elf + elf_header.e_phoff,
+              sizeof(Elf64_Phdr) * program_headers.size());
+
+  // Find the first PT_LOAD segment to get base load address
+  std::uintptr_t load_addr = 0;
+  for (const auto &phdr : program_headers) {
+    if (phdr.p_type == PT_LOAD) {
+      load_addr = phdr.p_vaddr;
+      break;
+    }
+  }
+
   std::vector<Elf64_Shdr> section_headers{elf_header.e_shnum};
   std::memcpy(section_headers.data(), elf + elf_header.e_shoff,
               sizeof(Elf64_Shdr) * section_headers.size());
 
-  //  symbol section headers
   std::vector<Elf64_Shdr> matching_symbols;
   std::ranges::copy_if(section_headers, std::back_inserter(matching_symbols),
                        [](const Elf64_Shdr &header) {
@@ -111,27 +124,28 @@ process::func_addr(std::string_view function_name) const {
   if (matching_symbols.empty()) [[unlikely]] {
     throw std::system_error(
         errno, std::generic_category(),
-        std::format("failed to find  symbols in elf file in pid: {}",
+        std::format("failed to find symbols in elf file in pid: {}",
                     this->pid()));
   }
+
   std::vector<function> functions{};
   for (const auto &symbols : matching_symbols) {
-    // read symbols
     std::vector<Elf64_Sym> syms(symbols.sh_size / sizeof(Elf64_Sym));
     std::memcpy(syms.data(), elf + symbols.sh_offset, symbols.sh_size);
-    // get the string table associated with this symbol table
+
     const auto symbol_str_table = section_headers.at(symbols.sh_link);
     std::vector<char> str_table(symbol_str_table.sh_size);
     std::memcpy(str_table.data(), elf + symbol_str_table.sh_offset,
                 str_table.size());
-    // extract function names
+
     for (const auto &sym : syms) {
-      const auto name = std::string_view(str_table.data() + sym.st_name);
-      if (!name.empty()) {
-        const auto addr = this->base_addr() + sym.st_value;
-        functions.emplace_back(name.data(), addr);
-        if (!addr_cache.contains(std::string(name))) {
-          addr_cache.insert({std::string(name), addr});
+      // Only process function symbols
+      if (ELF64_ST_TYPE(sym.st_info) == STT_FUNC) {
+        const auto name = std::string_view(str_table.data() + sym.st_name);
+        if (!name.empty()) {
+          // Calculate actual runtime address
+          const auto addr = this->base_addr() + (sym.st_value - load_addr);
+          functions.emplace_back(name.data(), addr);
         }
       }
     }

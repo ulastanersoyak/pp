@@ -1,7 +1,16 @@
+#include "cli/parser.hpp"
+
+#include <expected>
 #include <print>
 
-void print_usage(std::string_view program_name) noexcept {
-  std::println("{}", program_name);
-}
+int main(int argc, char **argv) {
+  pp::cli_parser parser{};
+  pp::load_commands(parser);
 
-int main(int argc, char **argv) { return 0; }
+  if (auto result = parser.parse(argc, argv); !result) {
+    std::println(stderr, "Error: {}", result.error());
+    return EXIT_FAILURE;
+  }
+
+  return EXIT_SUCCESS;
+}
