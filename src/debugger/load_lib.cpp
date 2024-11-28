@@ -34,45 +34,57 @@ void debugger::load_library(std::string_view path) const {
         std::format("no libc region was found in pid: {}", this->proc_.pid()));
   }
 
-  const auto elf_opt = read_elf(path);
-  if (!elf_opt.has_value()) {
-    throw std::system_error(
-        errno, std::generic_category(),
-        std::format("failed to read the elf file /tmp/hook.o"));
-  }
-  const auto *elf = elf_opt.value().data();
+  // read libc from disk
+  const auto elf_str = read_file(libc_region->name().value());
+  const auto *elf = elf_str.data();
 
-  Elf64_Ehdr elf_header{};
+  // parse out the elf header
+  ::Elf64_Ehdr elf_header{};
   std::memcpy(&elf_header, elf, sizeof(elf_header));
-  std::vector<Elf64_Shdr> section_headers{elf_header.e_shnum};
-  std::memcpy(section_headers.data(), elf + elf_header.e_shoff,
-              sizeof(Elf64_Shdr) * section_headers.size());
-  // dynamic symbol section header
-  const auto symbols =
-      std::ranges::find_if(section_headers, [](const Elf64_Shdr &header) {
-        return header.sh_type == SHT_DYNSYM;
-      });
-
-  if (symbols == std::ranges::cend(section_headers)) [[unlikely]] {
-    throw std::system_error(
-        errno, std::generic_category(),
-        std::format("failed to find symbols in elf file in pid: {}",
-                    this->proc_.pid()));
+  if (std::memcmp(elf_header.e_ident, ELFMAG, SELFMAG) != 0) {
+    throw std::runtime_error("not an ELF");
   }
 
-  std::vector<Elf64_Sym> syms(symbols->sh_size / sizeof(Elf64_Sym));
-  std::memcpy(syms.data(), elf + symbols->sh_offset, symbols->sh_size);
-  const auto symbol_str_table = section_headers.at(symbols->sh_link);
-  std::vector<char> str_table(symbol_str_table.sh_size);
-  std::memcpy(str_table.data(), elf + symbol_str_table.sh_offset,
-              str_table.size());
-  std::uintptr_t dlopen_addr{};
-  for (const auto &sym : syms) {
-    if (std::string_view(str_table.data() + sym.st_name) == "dlopen"sv) {
-      dlopen_addr = sym.st_value + libc_region->begin();
+  // get the section headers
+  std::vector<::Elf64_Shdr> section_headers(elf_header.e_shnum);
+  std::memcpy(section_headers.data(), elf + elf_header.e_shoff,
+              sizeof(::Elf64_Shdr) * section_headers.size());
+
+  // find the dynamic symbol section header
+  const auto dynsym = std::ranges::find_if(
+      section_headers, [](const auto &e) { return e.sh_type == SHT_DYNSYM; });
+  if (dynsym == std::ranges::cend(section_headers)) {
+    throw std::runtime_error("cannot find dynsym");
+  }
+
+  // get all the symbols from the dynsym
+  std::vector<::Elf64_Sym> sym_table(dynsym->sh_size / sizeof(::Elf64_Sym));
+  std::memcpy(sym_table.data(), elf + dynsym->sh_offset, dynsym->sh_size);
+
+  // get the string table for synsym
+  const auto dynstr = section_headers[dynsym->sh_link];
+
+  // copy all the strings from the table for easier parsing
+  std::vector<char> str_table(dynstr.sh_size);
+  std::memcpy(str_table.data(), elf + dynstr.sh_offset, str_table.size());
+
+  std::uintptr_t dlopen_addr{static_cast<uintptr_t>(-1)};
+
+  // search for dlopen
+  for (const auto &symbol : sym_table) {
+    if (std::string_view(str_table.data() + symbol.st_name) == "dlopen"sv) {
+      // found it, resolve the address of it in the process memory (offset +
+      // address of libc)
+      dlopen_addr = symbol.st_value + libc_region->begin();
       break;
     }
   }
+
+  if (dlopen_addr == -1UL) {
+    throw std::system_error(errno, std::generic_category(),
+                            std::format("failed to find dlopen function"));
+  }
+
   // inject the .so file's path to the targets memory
   const auto mem_region = this->allocate_memory(4096U);
   auto mem_buffer = read_memory_region(this->proc_, mem_region);
@@ -100,15 +112,15 @@ void debugger::load_library(std::string_view path) const {
         errno, std::generic_category(),
         std::format("failed to read the memory of tid: {}", main_thread_tid));
   }
-  // assembly for the instructions below
-  // nop; 90
-  // nop; 90
-  // call rbx; FF D3
-  // int3; CC
-  // nop; 90
-  // nop; 90
-  // nop; 90
-  const std::uint64_t hook_instr = 0x909090CCD3FF9090;
+  // replace the executable section with:
+  //   nop       ; padding
+  //   nop
+  //   nop
+  //   call rbx  ; address of dlopen will be in rbx
+  //   int3      ; suspend process and return to debugger
+  //   nop       ; padding
+  //   nop
+  const auto hook_instr = 0x909090ccd3ff9090;
   // destructive
   if (ptrace(PTRACE_POKETEXT, main_thread_tid, executable_region->begin(),
              hook_instr) == -1) {
@@ -139,19 +151,7 @@ void debugger::load_library(std::string_view path) const {
         errno, std::generic_category(),
         std::format("failed to wait for tid: {}", main_thread_tid));
   }
-  // check if given process got any signal other than sigtrap
-  if (WSTOPSIG(wstatus) != SIGTRAP) {
-    throw std::system_error(
-        errno, std::generic_category(),
-        std::format("failed to wait for tid: {}", main_thread_tid));
-  }
-  const auto rs_regs = this->get_regs(this->main_thread());
-  const auto mmap_res = rs_regs.regs.rax;
-  if (reinterpret_cast<void *>(mmap_res) == MAP_FAILED) {
-    throw std::system_error(
-        errno, std::generic_category(),
-        std::format("failed mmap execution for the tid: {}", main_thread_tid));
-  }
+
   this->set_regs(this->main_thread(), saved_regs);
   if (ptrace(PTRACE_POKETEXT, main_thread_tid, executable_region->begin(),
              instr) == -1) {
