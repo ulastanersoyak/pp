@@ -5,6 +5,7 @@
 #include "util/read_file.hpp"
 
 #include <cstring>
+#include <elf.h>
 #include <filesystem>
 #include <print>
 
@@ -64,7 +65,21 @@ void debugger::hook(const function &target,
       continue;
     const auto name = std::string_view(str_tab.data() + sym.st_name);
     if (name == "hook_main") {
-      hook_main_offset = sym.st_value;
+      // Get the offset relative to the start of the text section
+      const Elf64_Shdr *text_section = nullptr;
+      for (const auto &section : section_headers) {
+        const auto sec_name =
+            std::string_view(shstr_tab.data() + section.sh_name);
+        if (sec_name == ".text") {
+          text_section = &section;
+          break;
+        }
+      }
+      if (!text_section) {
+        throw std::runtime_error(".text section not found");
+      }
+      // Calculate offset relative to start of .text
+      hook_main_offset = sym.st_value - text_section->sh_addr;
       break;
     }
   }
@@ -84,7 +99,7 @@ void debugger::hook(const function &target,
   const auto target_fn_region = addr_to_region(this->proc_, target.address);
   this->change_region_permissions(target_fn_region);
 
-  // create jump instruction
+  // Create jump instruction
   std::vector<std::byte> instr;
   instr.emplace_back(std::byte(0x48)); // REX prefix for 64-bit
   instr.emplace_back(std::byte(0xB8)); // mov rax, imm64

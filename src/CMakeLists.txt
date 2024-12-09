@@ -1,10 +1,11 @@
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(CAPSTONE REQUIRED capstone)
+
 file(
   GLOB DIRS
   LIST_DIRECTORIES true
   "${CMAKE_CURRENT_SOURCE_DIR}/*")
-
 set(ALL_SOURCES)
-
 foreach(DIR ${DIRS})
   if(IS_DIRECTORY ${DIR})
     file(GLOB_RECURSE SOURCES "${DIR}/*.cpp")
@@ -12,16 +13,19 @@ foreach(DIR ${DIRS})
     message(STATUS "sources in: ${DIR}, files: ${SOURCES}")
   endif()
 endforeach()
-
 list(FILTER ALL_SOURCES EXCLUDE REGEX ".*main\\.cpp$")
 
 if(BUILD_SHARED_LIBS)
   add_library(ppdynamic SHARED ${ALL_SOURCES})
-  target_include_directories(ppdynamic PRIVATE "${CMAKE_SOURCE_DIR}/includes")
+  target_include_directories(ppdynamic PRIVATE "${CMAKE_SOURCE_DIR}/includes"
+                                               ${CAPSTONE_INCLUDE_DIRS})
+  target_link_libraries(ppdynamic PRIVATE ${CAPSTONE_LIBRARIES})
   set(PP_LIB ppdynamic)
 else()
   add_library(ppstatic STATIC ${ALL_SOURCES})
-  target_include_directories(ppstatic PRIVATE "${CMAKE_SOURCE_DIR}/includes")
+  target_include_directories(ppstatic PRIVATE "${CMAKE_SOURCE_DIR}/includes"
+                                              ${CAPSTONE_INCLUDE_DIRS})
+  target_link_libraries(ppstatic PRIVATE ${CAPSTONE_LIBRARIES})
   set(PP_LIB ppstatic)
 endif()
 

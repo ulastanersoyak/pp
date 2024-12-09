@@ -1,3 +1,5 @@
+#pragma once
+
 #include "memory_region.hpp"
 #include "util/type_traits.hpp"
 

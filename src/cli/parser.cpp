@@ -1,6 +1,7 @@
 #include "cli/parser.hpp"
 #include "debugger/debugger.hpp"
 #include "debugger/registers.hpp"
+#include "disassembler/disassembler.hpp"
 #include "memory_region/memio.hpp"
 #include "memory_region/permission.hpp"
 #include "process/process.hpp"
@@ -1085,6 +1086,50 @@ void load_commands(cli_parser &parser) {
          } catch (const std::exception &e) {
            return std::unexpected{
                std::format("Error checking access: {}", e.what())};
+         }
+       }});
+
+  parser.add_command(
+      {.name = "disasm",
+       .description = "disassemble memory region",
+       .args = {"<pid>", "<address>", "<size>"},
+       .handler = [](std::span<const std::string_view> args)
+           -> std::expected<void, std::string> {
+         if (args.size() < 3) {
+           return std::unexpected{"Usage: disasm <pid> <address> <size>"};
+         }
+
+         try {
+           const auto pid =
+               static_cast<std::uint32_t>(std::stoul(std::string{args[0]}));
+           const auto addr = std::stoull(std::string{args[1]}, nullptr, 16);
+           const auto size = std::stoull(std::string{args[2]});
+
+           pp::process proc{pid};
+           pp::disassembler disasm;
+           pp::memory_region region{addr, size, pp::permission::READ};
+
+           try {
+             const auto memory = pp::read_memory_region(proc, region);
+             const auto instructions = disasm.disassemble(memory, addr);
+
+             std::println("Disassembly of 0x{:x} (size: {} bytes):", addr,
+                          size);
+             for (const auto &inst : instructions) {
+               std::println("{}", inst);
+             }
+             return {};
+           } catch (const std::runtime_error &e) {
+             return std::unexpected{
+                 std::format("Failed to disassemble: {}", e.what())};
+           }
+
+         } catch (const std::invalid_argument &e) {
+           return std::unexpected{
+               std::format("Invalid argument: {}", e.what())};
+         } catch (const std::exception &e) {
+           return std::unexpected{
+               std::format("Error during disassembly: {}", e.what())};
          }
        }});
 }
