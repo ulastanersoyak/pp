@@ -483,62 +483,85 @@ void load_commands(cli_parser &parser) {
          }
        }});
 
-  // Search memory command
   parser.add_command(
       {.name = "search",
-       .description = "search for pattern in memory regions",
-       .args = {"<pid>", "<pattern>"},
+       .description = "search for pattern (hex or string) in memory regions",
+       .args = {"<pid>", "<pattern>", "[--string|-s]"},
        .handler = [](std::span<const std::string_view> args)
            -> std::expected<void, std::string> {
          if (args.size() < 2) {
-           return std::unexpected{"Usage: search <pid> <pattern>"};
+           return std::unexpected{
+               "Usage: search <pid> <pattern> [--string|-s]"};
          }
-
          try {
            const auto pid =
                static_cast<std::uint32_t>(std::stoul(std::string{args[0]}));
 
-           // Convert hex string pattern to bytes
-           auto hex_to_bytes = [](std::string_view hex) {
-             std::vector<std::byte> bytes;
-             for (size_t i = 0; i < hex.length(); i += 2) {
-               bytes.push_back(static_cast<std::byte>(
-                   std::stoul(std::string{hex.substr(i, 2)}, nullptr, 16)));
+           // Check if string mode is enabled
+           const bool string_mode =
+               args.size() > 2 && (args[2] == "--string" || args[2] == "-s");
+
+           std::vector<std::byte> pattern;
+           if (string_mode) {
+             // Convert ASCII string to bytes
+             const auto &str = args[1];
+             pattern.reserve(str.size());
+             for (char c : str) {
+               pattern.push_back(static_cast<std::byte>(c));
              }
-             return bytes;
-           };
+           } else {
+             auto hex_to_bytes = [](std::string_view hex) {
+               std::vector<std::byte> bytes;
+               if (hex.length() % 2 != 0) {
+                 throw std::invalid_argument(
+                     "Hex pattern must have even length");
+               }
+               for (size_t i = 0; i < hex.length(); i += 2) {
+                 if (!std::isxdigit(hex[i]) || !std::isxdigit(hex[i + 1])) {
+                   throw std::invalid_argument(
+                       "Invalid hex character in pattern");
+                 }
+                 bytes.push_back(static_cast<std::byte>(
+                     std::stoul(std::string{hex.substr(i, 2)}, nullptr, 16)));
+               }
+               return bytes;
+             };
+             pattern = hex_to_bytes(args[1]);
+           }
 
-           const auto pattern = hex_to_bytes(args[1]);
+           if (pattern.empty()) {
+             return std::unexpected{"Pattern cannot be empty"};
+           }
+
            pp::process proc{pid};
-
-           std::println("Searching for pattern in process {} ({}):", pid,
+           std::println("Searching for {} pattern '{}' in process {} ({}):",
+                        string_mode ? "string" : "hex", args[1], pid,
                         proc.name());
+
+           size_t total_matches = 0;
            for (const auto &region : proc.memory_regions()) {
              if (region.has_permissions(pp::permission::READ)) {
                try {
                  const auto memory = pp::read_memory_region(proc, region);
-
                  // Search for pattern in this region
                  auto it = std::search(memory.begin(), memory.end(),
                                        pattern.begin(), pattern.end());
-
                  while (it != memory.end()) {
                    const auto offset = std::distance(memory.begin(), it);
                    std::println("Found at: 0x{:x}",
                                 region.begin() +
                                     static_cast<std::size_t>(offset));
-
-                   // Continue searching
+                   total_matches++;
                    it = std::search(it + 1, memory.end(), pattern.begin(),
                                     pattern.end());
                  }
                } catch (...) {
-                 // Skip regions we can't read
                  continue;
                }
              }
            }
 
+           std::println("Total matches found: {}", total_matches);
            return {};
          } catch (const std::exception &e) {
            return std::unexpected{
