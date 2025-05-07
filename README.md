@@ -1,4 +1,4 @@
-# pp(process processor) - process debugging and analysis tool
+# pp
 
 a linux-based process debugging and analysis tool that allows you to inspect, analyze, and modify running processes. it provides functionality for function hooking, memory analysis, and process inspection.
 
