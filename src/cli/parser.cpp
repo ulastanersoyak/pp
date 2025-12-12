@@ -460,11 +460,15 @@ void load_commands(cli_parser &parser) {
              if (region.has_permissions(pp::permission::READ |
                                         pp::permission::WRITE)) {
                try {
-                 pp::replace_memory(proc, region, find_pattern, replace_pattern,
-                                    occurrences);
-                 if (occurrences) {
-                   total_replacements += *occurrences;
+                 auto remaining = occurrences;
+                 if (remaining && *remaining <= total_replacements) {
+                   break;
                  }
+                 if (remaining) {
+                   *remaining -= total_replacements;
+                 }
+                 total_replacements += pp::replace_memory(
+                     proc, region, find_pattern, replace_pattern, remaining);
                } catch (...) {
                  // Skip regions we can't access
                  continue;
@@ -473,9 +477,7 @@ void load_commands(cli_parser &parser) {
            }
 
            std::println("Successfully replaced pattern in process {}", pid);
-           if (occurrences) {
-             std::println("Replacements made: {}", total_replacements);
-           }
+           std::println("Replacements made: {}", total_replacements);
            return {};
          } catch (const std::exception &e) {
            return std::unexpected{

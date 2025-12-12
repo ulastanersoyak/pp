@@ -71,33 +71,42 @@ void write_memory_region(const T &t, const memory_region &region,
 #endif
 }
 
+// Returns the number of occurrences that were actually replaced.
 template <thread_or_process T>
-void replace_memory(const T &t, const memory_region &region,
-                    std::span<const std::byte> find,
-                    std::span<const std::byte> replace,
-                    std::optional<std::size_t> occurrences = std::nullopt) {
+std::size_t replace_memory(const T &t, const memory_region &region,
+                           std::span<const std::byte> find,
+                           std::span<const std::byte> replace,
+                           std::optional<std::size_t> occurrences =
+                               std::nullopt) {
   auto mem = read_memory_region(t, region);
   auto mem_span = std::span(mem);
   auto remaining_occurrences =
       occurrences.value_or(std::numeric_limits<std::size_t>::max());
+  std::size_t replaced = 0;
   while (!mem_span.empty() && (remaining_occurrences > 0)) {
-    if (const auto found = std::ranges::search(mem_span, find);
-        !found.empty()) {
-      const auto begin =
-          std::ranges::distance(std::cbegin(mem_span), std::cbegin(found));
-      std::memcpy(mem_span.data() + begin, replace.data(), replace.size());
-      write_memory_region(t, region, mem);
-      remaining_occurrences--;
-    } else {
+    const auto found = std::ranges::search(mem_span, find);
+    if (found.empty()) {
       break;
     }
+    const auto begin =
+        std::ranges::distance(std::cbegin(mem_span), std::cbegin(found));
+    std::memcpy(mem_span.data() + begin, replace.data(), replace.size());
+    write_memory_region(t, region, mem);
+    // Continue searching past the just-replaced bytes so a replacement
+    // that contains the search pattern is not matched again.
+    mem_span = mem_span.subspan(
+        static_cast<std::size_t>(begin) + replace.size());
+    remaining_occurrences--;
+    replaced++;
   }
+  return replaced;
 }
 
 template <thread_or_process T, typename R>
-void replace_memory(const T &t, const memory_region &region, R &&find,
-                    R &&replace,
-                    std::optional<std::size_t> occurrences = std::nullopt)
+std::size_t replace_memory(const T &t, const memory_region &region, R &&find,
+                           R &&replace,
+                           std::optional<std::size_t> occurrences =
+                               std::nullopt)
   requires std::ranges::contiguous_range<R>
 {
   const auto find_bytes =
@@ -105,12 +114,13 @@ void replace_memory(const T &t, const memory_region &region, R &&find,
   const auto replace_bytes =
       reinterpret_cast<const std::byte *>(std::ranges::data(replace));
 
-  replace_memory(t, region,
-                 {find_bytes, std::ranges::size(find) *
-                                  sizeof(std::ranges::range_value_t<R>)},
-                 {replace_bytes, std::ranges::size(replace) *
-                                     sizeof(std::ranges::range_value_t<R>)},
-                 occurrences);
+  return replace_memory(
+      t, region,
+      {find_bytes,
+       std::ranges::size(find) * sizeof(std::ranges::range_value_t<R>)},
+      {replace_bytes,
+       std::ranges::size(replace) * sizeof(std::ranges::range_value_t<R>)},
+      occurrences);
 }
 
 } // namespace pp
