@@ -46,6 +46,20 @@ process::func_addr(std::string_view function_name) const {
   const auto elf = elf_opt.value().c_str();
   Elf64_Ehdr elf_header{};
   std::memcpy(&elf_header, elf, sizeof(elf_header));
+
+  // Determine the ELF's own load bias from the first PT_LOAD segment so that
+  // runtime addresses are computed the same way as in process::functions().
+  std::vector<Elf64_Phdr> program_headers(elf_header.e_phnum);
+  std::memcpy(program_headers.data(), elf + elf_header.e_phoff,
+              sizeof(Elf64_Phdr) * program_headers.size());
+  std::uintptr_t load_addr = 0;
+  for (const auto &phdr : program_headers) {
+    if (phdr.p_type == PT_LOAD) {
+      load_addr = phdr.p_vaddr;
+      break;
+    }
+  }
+
   std::vector<Elf64_Shdr> section_headers{elf_header.e_shnum};
   std::memcpy(section_headers.data(), elf + elf_header.e_shoff,
               sizeof(Elf64_Shdr) * section_headers.size());
@@ -56,6 +70,7 @@ process::func_addr(std::string_view function_name) const {
                          return header.sh_type == SHT_DYNSYM ||
                                 header.sh_type == SHT_SYMTAB;
                        });
+  const auto proc_base_addr = this->base_addr();
   for (const auto &symbols : matching_symbols) {
     // read symbols
     std::vector<Elf64_Sym> syms(symbols.sh_size / sizeof(Elf64_Sym));
@@ -65,16 +80,12 @@ process::func_addr(std::string_view function_name) const {
     std::vector<char> str_table(symbol_str_table.sh_size);
     std::memcpy(str_table.data(), elf + symbol_str_table.sh_offset,
                 str_table.size());
-    // extract function addresses
+    // resolve the address of the symbol whose name matches exactly
     for (const auto &sym : syms) {
       const auto name = std::string_view(str_table.data() + sym.st_name);
-      const auto proc_base_addr = base_addr();
-      if (name.contains(function_name)) {
-        uintptr_t func_address = proc_base_addr + sym.st_value;
-        if (!addr_cache.contains(std::string(name))) {
-          const auto addr = this->base_addr() + sym.st_value;
-          addr_cache.insert({std::string(name), addr});
-        }
+      if (name == function_name) {
+        const auto func_address = proc_base_addr + (sym.st_value - load_addr);
+        addr_cache.insert_or_assign(std::string(function_name), func_address);
         return func_address;
       }
     }
