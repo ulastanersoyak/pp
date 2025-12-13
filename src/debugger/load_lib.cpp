@@ -27,7 +27,8 @@ void debugger::load_library(std::string_view path) const {
   using namespace std::literals;
   const auto libc_region =
       std::ranges::find_if(regions, [](const memory_region &region) {
-        return region.name()->contains("libc.so"sv);
+        const auto name = region.name();
+        return name.has_value() && name->contains("libc.so"sv);
       });
   if (libc_region == std::ranges::cend(regions)) [[unlikely]] {
     throw std::runtime_error(

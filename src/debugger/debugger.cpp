@@ -25,7 +25,8 @@ debugger::debugger(process &proc, std::optional<std::size_t> timeout)
   auto timeout_duration = std::chrono::milliseconds(
       timeout.value_or(std::numeric_limits<std::size_t>::max()));
   const auto start_time = std::chrono::steady_clock::now();
-  const auto threads = proc.threads();
+  // proc has been moved from into proc_; operate on the member from here on.
+  const auto threads = this->proc_.threads();
 
   for (const thread &t : threads) {
     if (ptrace(PTRACE_ATTACH, static_cast<std::int32_t>(t.tid()), nullptr,
@@ -42,7 +43,7 @@ debugger::debugger(process &proc, std::optional<std::size_t> timeout)
             std::format("failed to wait for tid: {}", t.tid()));
       }
       if (WIFSTOPPED(status)) {
-        this->suspended_threads.emplace_back(proc.pid(), t.tid());
+        this->suspended_threads.emplace_back(this->proc_.pid(), t.tid());
         break;
       } else {
         if (ptrace(PTRACE_CONT, static_cast<std::int32_t>(t.tid()), nullptr,
@@ -60,7 +61,8 @@ debugger::debugger(process &proc, std::optional<std::size_t> timeout)
   if (this->suspended_threads.size() != threads.size()) {
     throw std::system_error(
         errno, std::generic_category(),
-        std::format("failed to attach to all threads of pid: {}", proc.pid()));
+        std::format("failed to attach to all threads of pid: {}",
+                    this->proc_.pid()));
   }
 
 #else
